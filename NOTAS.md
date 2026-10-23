@@ -101,3 +101,15 @@ anterior a la revisión. Compilar con
 - `visible_interdiction` devolvía la cota inferior del maestro con el signo invertido (corregido). En `results/reeval_*.jsonl`, `Vvis_LB_strong` está guardado con ese signo.
 - Los resultados sintéticos con beam (`*_f.jsonl`, `reeval_*.jsonl`) son cotas inferiores sesgadas: reevaluada con el atacante exacto, la mezcla optimizada contra el beam vale hasta 2 veces más de lo que el beam decía (δ = 0, semilla 3), y en ese caso queda peor que la colocación visible. Los resultados que valen son los exactos (`exact_*.jsonl`, `goad_exact_*.jsonl`).
 - Auditoría (21-oct-2026), corregido: desalineación de pesos en el oráculo defensor del DO; `visible_interdiction(certify=True)` elegía B por la cota y no por el incumbente; gap MIP por defecto en defensor y maestro visible; footholds como candidatos en líneas base.
+
+## 23-oct-2026: línea base de camino más corto (Ngo et al.)
+
+- `periplo/spath.py`: colocación óptima contra el "simple attacker" de Ngo et al. (INFOCOM 2024): camino más corto
+  en saltos, elegido al azar, hacia tier 0 fusionado; exacta para k <= 3 (conteo de caminos + inclusión-exclusión),
+  empates rotos hacia la captura más temprana. Probada contra enumeración explícita (`tests/test_spath.py`).
+- `scripts/spopt.py` la evalúa con nuestro atacante (`results/v2/spopt.jsonl`). Candidatos: los mismos que la mezcla y
+  la visible (todos los nodos), más favorable a la línea base que el "solo computadoras" de Ngo et al.
+- Resultado: en los sintéticos atrapa al 100% de los atacantes de camino más corto pero deja 1,1–4,7 veces el botín de
+  la visible óptima; en GOAD coincide con la visible óptima en 10 de 24 configuraciones (máx 1,6 veces).
+- Verificador: si una mejor respuesta tocó un límite (solo en las corridas de alta redundancia con tope de 1 h), se
+  acepta una cota recalculada menor o igual que la registrada (antes se exigía igualdad; altado:3 dio 25,07 vs 25,66).

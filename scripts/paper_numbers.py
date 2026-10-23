@@ -41,6 +41,15 @@ for r in S:
     if not partial:
         assert r["Vmix_cert"] and r["Vvis_cert"], r["task"]
 best_heur = lambda r: min(b["v"] for b in r["base"].values())
+# línea base: colocación óptima contra el atacante de camino más corto (Ngo et al.), scripts/spopt.py
+SPR = {r["task"]: r for r in load(f"{V2}/spopt.jsonl")}
+def sp_pct(r, task=None):
+    x = SPR.get(task or r["task"])
+    if x is None or x["V"] is None:
+        return None
+    if not partial:
+        assert x["exact"], x["task"]
+    return pct(r, x["V"])
 main = sorted([r for r in S if r["redundancy"] == "media" and r["delta"] == "0.0"], key=lambda r: (r["scale"], r["seed"]))
 ratio = lambda r: r["Vmix"] / r["Vvis"]
 if main:
@@ -56,6 +65,12 @@ if main:
                   HeurOverMixMax=f1(max(best_heur(r) / r["Vmix"] for r in main)),
                   SuppMin=min(r["soporte"] for r in main), SuppMax=max(r["soporte"] for r in main),
                   NRatioOne=sum(x > 0.99 for x in rs))
+    spm = [(sp_pct(r), r) for r in main if sp_pct(r) is not None]
+    if spm:
+        assert all(SPR[r["task"]]["sp_hit"] > 1 - 1e-9 for _, r in spm)   # el texto dice que atrapa a todo atacante de camino más corto
+        macros.update(SpMean=f1(st.mean(x for x, _ in spm)), SpNoGuide=len(main) - len(spm), SpGuided=len(spm),
+                      SpOverVisMin=f1(min(x / pct(r, r["Vvis"]) for x, r in spm)), SpOverVisMax=f1(max(x / pct(r, r["Vvis"]) for x, r in spm)),
+                      SpOverMixMin=f1(min(x / pct(r, r["Vmix"]) for x, r in spm)), SpOverMixMax=f1(max(x / pct(r, r["Vmix"]) for x, r in spm)))
     small = [r for r in main if r["scale"] == 40]; big = [r for r in main if r["scale"] == 60]
     gcpu = lambda r: (r["cpu_do"] + r["cpu_vis"]) / 60
     fm = lambda x: f"{x:.1f}" if x < 10 else f"{x:.0f}"
@@ -77,9 +92,11 @@ for lab, sel in (("medium", lambda r: r["redundancy"] == "media" and r["scale"] 
     nmin, nmax = min(r["n"] for r in xs), max(r["n"] for r in xs)
     nodes = f"{nmin}" if nmin == nmax else f"{nmin}--{nmax}"
     rr = [ratio(r) for r in xs]
+    sps = [sp_pct(r) for r in xs if sp_pct(r) is not None]
+    spc = (f1(st.mean(sps)) + ("$^\\ddagger$" if len(sps) < len(xs) else "")) if sps else "--"
     lines.append(f"{lab} & {len(xs)} & {nodes} & {f1(st.mean(pct(r, r['Vmix']) for r in xs))} & {f1(st.mean(pct(r, r['Vvis']) for r in xs))} & "
                  f"{f2(st.mean(rr))} ({f2(min(rr))}--{f2(max(rr))}) & {f1(st.mean(pct(r, best_heur(r)) for r in xs))} & "
-                 f"{f1(st.mean(pct(r, r['uniforme']['v']) for r in xs))} & {st.median(r['cpu_do'] for r in xs):.0f} \\\\")
+                 f"{spc} & {st.median(r['cpu_do'] for r in xs):.0f} \\\\")
     if lab == "low":
         macros.update(LowRatioMin=f2(min(rr)), LowRatioMax=f2(max(rr)))
 fix = {r["seed"]: r for r in load(f"{V2}/alta_fix.jsonl") if r["cert"]}
@@ -97,8 +114,10 @@ if both:
     vis = [pct(alta[s], alta[s]["Vvis"]) for s in both]
     hb = [pct(alta[s], best_heur(alta[s])) for s in both]
     rr = [u / v for u, v in zip(ub, vis)]
+    spa = [sp_pct(alta[s], f"alta:{s}") for s in both]
+    spa = [x for x in spa if x is not None]
     lines.append(rf"high$^\dagger$ & {len(both)} & {alta[both[0]]['n']} & $\le$ {f1(st.mean(ub))} & {f1(st.mean(vis))} & "
-                 rf"$\le$ {f2(st.mean(rr))} & {f1(st.mean(hb))} & -- & -- \\")
+                 rf"$\le$ {f2(st.mean(rr))} & {f1(st.mean(hb))} & {f1(st.mean(spa)) if spa else '--'} & -- \\")
     nw = sum(UBmix[s] < alta[s]["Vvis_LB"] for s in both)
     macros.update(AltaWinsText=("all three" if nw == 3 == len(both) else f"{nw} of {len(both)}"),
                   AltaWins=nw,
@@ -109,9 +128,10 @@ write_tab("tab_synth.tex", lines, 9)
 
 # figura
 fig = []
-for name, fn in (("Uniform at random", lambda r: pct(r, r["uniforme"]["v"])), ("Best heuristic (ex post)", lambda r: pct(r, best_heur(r))),
+for name, fn in (("Uniform at random", lambda r: pct(r, r["uniforme"]["v"])), ("Shortest-path optimal", sp_pct),
+                 ("Best heuristic (ex post)", lambda r: pct(r, best_heur(r))),
                  ("Optimal visible placement", lambda r: pct(r, r["Vvis"])), ("Randomized deception", lambda r: pct(r, r["Vmix"]))):
-    xs = [fn(r) for r in main] or [0.0]
+    xs = [x for x in (fn(r) for r in main) if x is not None] or [0.0]
     fig.append(f"{name} & {st.mean(xs):.2f} & {min(xs):.2f} & {max(xs):.2f}")
 open(os.path.join(OUT, "fig_strategies.dat"), "w").write("name & mean & lo & hi\n" + "\n".join(fig) + "\n")
 
@@ -149,7 +169,7 @@ for adcs, lab in ((False, "no AD~CS"), (True, "AD~CS")):
             first = k == 1
             gl.append(f"{lab if first and d == 'inf' else ''} & {dlab if first else ''} & {f1(r['V0']) if first else ''} & {k} & "
                       f"{P(r, r['Vmix'])} & {P(r, r['Vvis'])} & {P(r, b['chokepoint']['v'])} & {P(r, b['top_valor']['v'])} & "
-                      f"{P(r, b['intermediacion']['v'])} & {P(r, r['uniforme']['v'])} \\\\")
+                      f"{P(r, b['intermediacion']['v'])} & {P(r, SPR[r['task']]['V']) if r['task'] in SPR else '--'} \\\\")
         if adcs is False and d == "0":
             gl.append("\\midrule")
 # GOAD con trampas solo en nodos concretos (sin nodos abstractos de dominio)
@@ -163,7 +183,7 @@ if all((True, "inf", k) in ND for k in (1, 2, 3)):
         r = ND[(True, "inf", k)]; b = r["base"]
         gl.append(f"{'AD~CS$^\\ast$' if k == 1 else ''} & {'$\\infty$' if k == 1 else ''} & {f1(r['V0']) if k == 1 else ''} & {k} & "
                   f"{P(r, r['Vmix'])} & {P(r, r['Vvis'])} & {P(r, b['chokepoint']['v'])} & {P(r, b['top_valor']['v'])} & "
-                  f"{P(r, b['intermediacion']['v'])} & {P(r, r['uniforme'])} \\\\")
+                  f"{P(r, b['intermediacion']['v'])} & {P(r, SPR[r['task']]['V']) if r['task'] in SPR else '--'} \\\\")
     n1, n2 = ND[(True, "inf", 1)], ND[(True, "inf", 2)]
     macros.update(GoadNdMixOne=f1(pct(n1, n1["Vmix"])), GoadNdVisOne=f1(pct(n1, n1["Vvis"])),
                   GoadNdMixTwo=f1(pct(n2, n2["Vmix"])), GoadNdVisTwo=f1(pct(n2, n2["Vvis"])),
@@ -174,6 +194,12 @@ if all((True, "inf", k) in ND for k in (1, 2, 3)):
         z1, z2 = ND[(True, "0", 1)], ND[(True, "0", 2)]
         macros.update(GoadNdZeroMixOne=f1(pct(z1, z1["Vmix"])), GoadNdZeroVisOne=f1(pct(z1, z1["Vvis"])),
                       GoadNdZeroMixTwo=f1(pct(z2, z2["Vmix"])), GoadNdZeroVisTwo=f1(pct(z2, z2["Vvis"])))
+gsp = [(r, SPR[r["task"]]["V"]) for r in list(G.values()) + list(ND.values()) if r["task"] in SPR and SPR[r["task"]]["V"] is not None]
+if gsp:
+    macros.update(GoadSpTot=len(gsp), GoadSpEqVis=sum(abs(v - r["Vvis"]) <= 1e-6 * max(1, r["Vvis"]) for r, v in gsp),
+                  GoadSpMaxOverVis=f1(max(v / r["Vvis"] for r, v in gsp if r["Vvis"] > 0)))
+    if (True, "inf", 1) in ND and ND[(True, "inf", 1)]["task"] in SPR:
+        r = ND[(True, "inf", 1)]; macros.update(GoadNdSpOne=f1(pct(r, SPR[r["task"]]["V"])))
 write_tab("tab_goad.tex", gl, 10)
 if len(G) == 12:
     a1, a2, n1 = G[(True, "inf", 1)], G[(True, "inf", 2)], G[(False, "inf", 1)]

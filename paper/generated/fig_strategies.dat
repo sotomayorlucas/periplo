@@ -1,5 +1,6 @@
 name & mean & lo & hi
 Uniform at random & 84.66 & 78.61 & 93.99
+Shortest-path optimal & 35.29 & 13.98 & 62.49
 Best heuristic (ex post) & 39.94 & 16.31 & 54.32
 Optimal visible placement & 16.26 & 7.34 & 31.24
 Randomized deception & 11.56 & 7.33 & 17.81

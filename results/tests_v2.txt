@@ -1,5 +1,6 @@
-Suite v2, 2026-10-22 23:46, certificación sin MILP
-tests/test_exact.py	instancias 200; fallas 0; tiempo total brute 5.0s, exacto 3.9s; estados máx 228 
+Suite v2, 2026-10-23 08:11, certificación sin MILP
+tests/test_exact.py	instancias 200; fallas 0; tiempo total brute 2.2s, exacto 1.6s; estados máx 228 
 tests/test_enum.py	test_enum: 60 instancias, 0 fallas 
 tests/test_game.py exact	instancias 25; DO != LP completo: 0; visible != fuerza bruta: 0 V_mix/V0 medio 0.125; V_vis/V0 medio 0.142 
 tests/test_robust.py	instancias 40 x 5 puntos de la caja; violaciones de la cota de la esquina: 0 
+tests/test_spath.py	test_spath: 40 instancias, 0 fallas 

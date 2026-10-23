@@ -25,6 +25,8 @@ an exact dynamic program for the attacker side and exhaustive enumeration of tra
 | `scripts/run_v2.py` | Runs every experiment of the paper and stores the certificates in `results/v2/`. |
 | `scripts/verify_certs.py` | Independent re-verification of the stored certificates. |
 | `scripts/ablation.py` | Ablation of the completion bound (Table 2 of the paper). |
+| `periplo/spath.py` | Baseline: the fixed placement that is optimal against an attacker who follows a uniformly random shortest path (in hops) to tier 0, the "simple attacker" of Ngo et al. (INFOCOM 2024); exact for k <= 3 by path counting on the shortest-path DAG and inclusion–exclusion. |
+| `scripts/spopt.py` | Evaluates that baseline with the attacker of the paper (`results/v2/spopt.jsonl`). |
 | `scripts/goad_nodomain.py` | GOADv2 with traps restricted to concrete nodes (no abstract "domain compromised" nodes). |
 | `scripts/alta_fix.py` | Certifies a high-redundancy visible placement whose first candidate set hit the state limit, by evaluating other candidate sets against the same lower bound. |
 | `scripts/run_tests.sh` | Runs the brute-force test suite and logs it to `results/tests_v2.txt`. |
@@ -91,6 +93,7 @@ python tests/test_exact.py        # attacker.exact vs brute force (delta in {0, 
 python tests/test_enum.py         # defender and visible-master enumeration vs brute force
 python tests/test_game.py exact   # double oracle (also time-capped) and visible variant vs the fully enumerated game
 python tests/test_robust.py       # box robustness (Proposition 3)
+python tests/test_spath.py        # shortest-path baseline vs explicit enumeration of shortest paths
 python tests/test_bloodhound.py   # parser (needs the BloodHound CE fixtures; skipped if absent)
 ```
 
