@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+results/v2/claims/
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.pdf
+paper/main_v1.tex
+scripts/paper_numbers_v1.py

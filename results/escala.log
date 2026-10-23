@@ -1,0 +1,11 @@
+{"exp": "escala", "scale": 20, "seed": 1, "redundancy": "media", "delta": 0.0, "n": 34, "V0": 13.179228550086338, "Vmix": 2.789379673716741, "Vvis": 3.230048529257387, "t_total": 11.428297281265259, "error": null}
+{"exp": "escala", "scale": 20, "seed": 2, "redundancy": "media", "delta": 0.0, "n": 52, "V0": 84.46320594400001, "Vmix": 10.655979816164397, "Vvis": 16.841531013435393, "t_total": 87.82377004623413, "error": null}
+{"exp": "escala", "scale": 20, "seed": 3, "redundancy": "media", "delta": 0.0, "n": 52, "V0": 62.24110915981682, "Vmix": 6.822933071039928, "Vvis": 8.26338442430954, "t_total": 29.46812915802002, "error": null}
+{"exp": "escala", "scale": 40, "seed": 1, "redundancy": "media", "delta": 0.0, "n": 95, "V0": 78.48991695483086, "Vmix": 7.811804216405097, "Vvis": 8.918200577111413, "t_total": 48.367653131484985, "error": null}
+{"exp": "escala", "scale": 40, "seed": 2, "redundancy": "media", "delta": 0.0, "n": 95, "V0": 61.95066848944, "Vmix": 6.200128079412995, "Vvis": 8.392301705975854, "t_total": 59.970216274261475, "error": null}
+{"exp": "escala", "scale": 40, "seed": 3, "redundancy": "media", "delta": 0.0, "n": 81, "V0": 31.51992230820915, "Vmix": 3.9760010962017525, "Vvis": 5.041383116525256, "t_total": 41.253331661224365, "error": null}
+{"exp": "escala", "scale": 80, "seed": 1, "redundancy": "media", "delta": 0.0, "n": 186, "V0": 63.74360477821239, "Vmix": 14.823981126688212, "Vvis": 21.610713090706337, "t_total": 176.27102899551392, "error": null}
+{"exp": "escala", "scale": 80, "seed": 2, "redundancy": "media", "delta": 0.0, "n": 186, "V0": 56.96809222295904, "Vmix": 11.047360966113214, "Vvis": 14.473742362517912, "t_total": 50.2852566242218, "error": null}
+{"exp": "escala", "scale": 80, "seed": 3, "redundancy": "media", "delta": 0.0, "n": 186, "V0": 76.15535150299999, "Vmix": 18.850566334147928, "Vvis": 32.789606148490385, "t_total": 81.89569139480591, "error": null}
+{"exp": "escala", "scale": 160, "seed": 1, "redundancy": "media", "delta": 0.0, "n": 369, "V0": 62.219164185357144, "Vmix": 19.452497412466528, "Vvis": 21.960519387271148, "t_total": 334.5576777458191, "error": null}
+{"exp": "escala", "scale": 160, "seed": 2, "redundancy": "media", "delta": 0.0, "n": 369, "V0": 70.779615856864, "Vmix": 20.37158858894899, "Vvis": 25.768113736374403, "t_total": 1065.842354774475, "error": null}

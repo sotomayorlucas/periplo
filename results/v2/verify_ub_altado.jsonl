@@ -1,0 +1,3 @@
+{"label": "altado:1", "LB": 9.240521676023155, "LB_rec": 9.240521676023155, "UB_rec": 10.684001333766062, "UB": 10.684001333766062, "mix_ok": true, "criterio": "UB recalculada <= UB registrada (corregido 23-oct; valores sin recomputar)"}
+{"label": "altado:2", "LB": 9.756765387095157, "LB_rec": 9.756765387095157, "UB_rec": 12.946691282294776, "UB": 12.946691282294776, "mix_ok": true, "criterio": "UB recalculada <= UB registrada (corregido 23-oct; valores sin recomputar)"}
+{"label": "altado:3", "LB": 13.863612838974197, "LB_rec": 13.863612838974197, "UB_rec": 25.65642732112427, "UB": 25.07299632675814, "mix_ok": true, "criterio": "UB recalculada <= UB registrada (corregido 23-oct; valores sin recomputar)"}

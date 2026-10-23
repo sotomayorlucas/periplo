@@ -1,0 +1,4 @@
+{"paso": "V0", "V0": 83.87865349216, "V0_ub": 83.87865349216, "t": 2.288403272628784, "seed": 1, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "D_viejo", "V_inf": 10.457606894518355, "V_sup": 10.457606894518355, "exacto": true, "beam": 9.537251651129619, "escenarios": 31, "t": 1359.7629952430725, "seed": 1, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "visible", "Vvis": 12.602212962755027, "LB": 12.602212962755027, "UB": 12.602212962755027, "cert": true, "B": ["SA00", "SA01", "USER053"], "t": 2665.753685235977, "seed": 1, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "heuristicas", "base": {"top_valor": 48.53749944136155, "intermediacion": 41.4425873070651, "chokepoint": 39.200025232711674}, "gana_a_visible_certificado": true, "t": 2717.4421062469482, "seed": 1, "n": 143, "redundancy": "alta", "delta": 0.0}

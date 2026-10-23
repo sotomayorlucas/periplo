@@ -1,0 +1,3 @@
+{"delta": 0.0, "k": 1, "adcs": false, "V0": 59.3672, "LB_D": 0.577, "UB_D": 0.7225, "UB_milp": 0.8633, "UB_conjuntos": 0.7717, "LB_juego": 0.577, "footholds_cerrados": 14, "n_footholds": 22, "t": 172.5859, "brecha_D_pctV0": 0.2451, "brecha_juego_pctV0": 0.2451}
+{"delta": 0.0, "k": 2, "adcs": false, "V0": 59.3672, "LB_D": 0.3133, "UB_D": 0.3352, "UB_milp": 0.3352, "UB_conjuntos": 0.3368, "LB_juego": 0.3133, "footholds_cerrados": 20, "n_footholds": 22, "t": 32.4985, "brecha_D_pctV0": 0.0369, "brecha_juego_pctV0": 0.0369}
+{"delta": 0.0, "k": 3, "adcs": false, "V0": 59.3672, "LB_D": 0.1951, "UB_D": 0.1951, "UB_milp": 0.1951, "UB_conjuntos": 0.1951, "LB_juego": 0.1951, "footholds_cerrados": 22, "n_footholds": 22, "t": 0.0001, "brecha_D_pctV0": 0.0, "brecha_juego_pctV0": 0.0}

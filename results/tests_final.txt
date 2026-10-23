@@ -1,0 +1,13 @@
+Suite final, 22-oct-2026, SCIP 10.0 por defecto en todos los MILP (attacker.DEFAULT_SOLVER = "scip")
+tests/test_cuts.py         instancias 120; fallas con cortes: 0
+tests/test_bounds.py       conjuntos: 60 instancias, fallas 0; δ=0 cota/óptimo mediana 1.123, máx 1.277
+                           grupos: 25 instancias x 3 niveles, fallas 0; alertas de cota 0
+tests/test_milp_stress.py  instancias 150; valor distinto 0; cota inválida 0; t máx 25.6s
+tests/test_attacker.py     MILP != fuerza bruta: 0; tiempo medio milp 3.90s
+tests/test_game.py         instancias 25; DO != LP completo: 0; visible != fuerza bruta: 0
+tests/test_game.py exact   instancias 25; DO != LP completo: 0 (todas certificadas); visible != fuerza bruta: 0
+tests/test_exact.py        instancias 200 (δ en {0, 1, 2.5, ∞}, mezclas de 1 a 4 escenarios); fallas 0
+tests/test_robust.py       instancias 40 x 5 puntos de la caja; violaciones de la cota de la esquina: 0
+tests/test_bloodhound.py   regresión sintético: OK; coerción: OK; fixtures v5/ingest, v6/ingest, v6/all leídos
+Con HiGHS (configuración anterior: presolve apagado) test_game daba visible != fuerza bruta: 1 (óptimo falso de HiGHS,
+ver results/highs_bug/game_trial1_deltainf.mps) y test_cuts daba 2 fallas.

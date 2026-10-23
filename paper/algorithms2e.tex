@@ -1,0 +1,194 @@
+\documentclass{llncs}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\usepackage{microtype}
+
+% ---------------------------------------------------------------------------
+% Pseudocódigo de PERIPLO en algorithm2e. Sigue el código real:
+%   Alg. 1 -> periplo/attacker.py: index_knapsack
+%   Alg. 2 -> periplo/attacker.py: exact            (game.exact_br lo siembra con beam de ancho 50)
+%   Alg. 3 -> periplo/game.py: defender_br_enum y visible_lb_enum
+%   Alg. 4 -> periplo/game.py: double_oracle(oracle="exact")
+%   Alg. 5 -> periplo/game.py: visible_interdiction(oracle="exact")
+%   Alg. 6 -> scripts/verify_certs.py
+% ---------------------------------------------------------------------------
+
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\SetKwFunction{Knap}{IndexKnapsack}
+\SetKwFunction{ExactBR}{ExactBR}
+\SetKwFunction{DefBR}{DefenderBR}
+\SetKwFunction{VisLB}{VisibleMaster}
+\SetKwFunction{Beam}{Beam}
+\SetKwFunction{LP}{SolveRestrictedGame}
+\SetKwFunction{Bnd}{bnd}
+\SetKwFunction{Surv}{surv}
+\SetKw{Continue}{continue}
+\SetKw{Break}{break}
+\SetKwComment{tcc}{$\triangleright$\ }{}
+\SetCommentSty{textit}
+\DontPrintSemicolon
+
+\newcommand{\Exp}{\mathbb{E}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\pagestyle{plain}
+\begin{document}
+
+\section*{PERIPLO: pseudocode}
+
+\noindent Notation. Trap mixture $D=\{(w_b,B_b)\}_b$; $c_v^b=1-q_v$ if $v\notin B_b$ and $c_v^b=0$ otherwise; survival of an acquired set $s_b(P)=\prod_{u\in P}c_u^b$; index $\rho_v^b=r_vc_v^b/(1-c_v^b)$. Types $t$ have foothold $s_t$ and prior $\mu_t$. $U(\pi,B)$ is the loot of $\pi$ truncated before its first trap. Tolerance $\varepsilon=10^{-6}$.
+
+% ---------------------------------------------------------------------------
+\begin{algorithm}[h]
+\caption{\textsc{IndexKnapsack}: completion bound of Lemma~1 for one scenario $b$}\label{alg:knap}
+\Input{candidate nodes $Y$, factors $c^b$, budget $T$}
+\Output{the step function $\tau\mapsto K(\tau)=\max\{H_b(Z): Z\subseteq Y,\ \sum_{v\in Z}p_v\le\tau\}$}
+$L\gets$ nodes of $Y$ with $c_v^b>0$, sorted by decreasing $\rho_v^b$\;
+$F\gets\{(0,0)\}$ \tcc*{Pareto list of (time used by the suffix, value of the suffix)}
+\ForEach(\tcc*[f]{reverse index order}){$v$ in $L$ from last to first}{
+  $F'\gets F$\;
+  \ForEach{$(u,x)\in F$ with $u+p_v\le T$}{
+    $F'\gets F'\cup\{(u+p_v,\ c_v^b\,(r_v+x))\}$ \tcc*{Horner step: $v$ goes first in the suffix}
+  }
+  $F\gets$ non-dominated pairs of $F'$ (less time, more value)\;
+}
+\Return{$\tau\mapsto\max\{x:(u,x)\in F,\ u\le\tau\}$}\;
+\end{algorithm}
+
+% ---------------------------------------------------------------------------
+\begin{algorithm}[p]
+\caption{\textsc{ExactBR}: exact attacker best response against $D$ (Algorithm~1 of the paper)}\label{alg:dp}
+\Input{foothold $s$, mixture $D$, budget $T$, switch cost $\delta$, incumbent $(v^\star,\pi^\star)$ from \Beam (width 50), limits $N_{\max}$ states and $t_{\max}$ seconds, $n_{\mathrm{big}}=12$}
+\Output{value $v^\star$, sequence $\pi^\star$, upper bound $\bar v$}
+$V_T\gets\{v\neq s:\ \text{minimum acquisition time of } v \text{ from } s\le T\}$\;
+$X_{\mathrm{big}}\gets$ the $n_{\mathrm{big}}$ nodes of $V_T$ with largest $r_v$\;
+\SetKwProg{Fn}{Function}{:}{}
+\Fn{\Bnd{$P,t$}}{
+  $X\gets P\cap X_{\mathrm{big}}$\;
+  \lIf{$K_b^X$ not memoized}{$K_b^X\gets\Knap(V_T\setminus X,\ c^b,\ T)$ for every $b$}
+  \Return{$\sum_b w_b\,s_b(P)\,K_b^X(T-t)$} \tcc*{valid for every $\delta$ (Lemma 1)}
+}
+\uIf{$\delta=0$}{key of a prefix $\gets P$ \tcc*{Proposition 2}}
+\Else{key of a prefix $\gets(P,\text{last})$; for finite $\delta>0$ a key keeps a Pareto set of labels}
+$\mathcal L\gets\{\text{root}: (\mathit{val},t,\pi)=(0,0,())\}$; $n\gets0$\;
+\While{$\mathcal L\neq\emptyset$}{
+  $\mathcal L'\gets\emptyset$\;
+  \ForEach{key $(P,\text{last})$ of $\mathcal L$}{
+    $S\gets(s_b(P))_b$ \tcc*{recomputed from $P$, not stored}
+    \ForEach{label $(\mathit{val},t,\pi)$ of the key}{
+      \lIf{$\mathit{val}+\Bnd(P,t)\le v^\star$}{\Continue}
+      $n\gets n+1$\;
+      \If{$n>N_{\max}$ \KwSty{or} elapsed time $>t_{\max}$}{
+        \Return{$(v^\star,\pi^\star,\ \max\{v^\star,\ \max_{\text{open labels}}\mathit{val}+\Bnd(P,t)\})$}
+      }
+      $C\gets$ out-neighbours of last (if $\delta=\infty$), else out-neighbours of $P\cup\{s\}$\;
+      \ForEach{$v\in C\setminus P$}{
+        $t'\gets t+p_v$, plus $\delta$ if $0<\delta<\infty$ and $\text{last}\to v$ is not an arc\;
+        \lIf{$t'>T$}{\Continue}
+        $S'\gets(S_b\,c_v^b)_b$;\quad $\mathit{val}'\gets\mathit{val}+r_v\sum_b w_bS'_b$\;
+        \lIf{$\mathit{val}'>v^\star$}{$(v^\star,\pi^\star)\gets(\mathit{val}',\pi v)$}
+        \lIf{$\mathit{val}'+\Bnd(P\cup\{v\},t')\le v^\star$}{\Continue}
+        \uIf{$\delta\in\{0,\infty\}$}{
+          in $\mathcal L'$, keep for key$(P\cup\{v\},v)$ only the label with the largest value\;
+        }\Else{
+          add $(\mathit{val}',t',\pi v)$ to key$(P\cup\{v\},v)$ unless some label has time $\le t'$ and value $\ge\mathit{val}'$; drop the labels it dominates\;
+        }
+      }
+    }
+  }
+  $\mathcal L\gets\mathcal L'$ \tcc*{layer by layer in $|P|$}
+}
+\Return{$(v^\star,\pi^\star,v^\star)$}\;
+\end{algorithm}
+
+% ---------------------------------------------------------------------------
+\begin{algorithm}[h]
+\caption{Enumeration over trap sets (no solver)}\label{alg:enum}
+\Input{candidate nodes $V_c$, number of traps $k$}
+\SetKwProg{Fn}{Function}{:}{}
+\Fn{\DefBR{$\{(\omega_j,\pi_j)\}_j$}}{
+  $f(B)\gets0$ for every $B\subseteq V_c$ with $|B|=k$ \tcc*{size $k$ suffices: $U$ is non-increasing in $B$}
+  \ForEach{$j$ with $\omega_j>0$}{
+    $\mathrm{pos}_j(v)\gets$ position of $v$ in $\pi_j$, or $|\pi_j|$ if absent\;
+    $\mathrm{pref}_j(m)\gets$ loot of the first $m$ nodes of $\pi_j$\;
+    $f(B)\gets f(B)+\omega_j\,\mathrm{pref}_j\bigl(\min_{v\in B}\mathrm{pos}_j(v)\bigr)$ for all $B$ \tcc*{vectorized}
+  }
+  $B'\gets\argmin_B f(B)$\;
+  \Return{$(B',\ f(B'))$}\;
+}
+\Fn{\VisLB{$(\mathcal P_t)_t$}}{
+  $g(B)\gets\sum_t\mu_t\max_{\pi\in\mathcal P_t}U(\pi,B)$ for every $|B|=k$ \tcc*{same prefix tables}
+  \Return{$(\min_B g(B),\ \argmin_B g(B))$}\;
+}
+\end{algorithm}
+
+% ---------------------------------------------------------------------------
+\begin{algorithm}[p]
+\caption{Certified double oracle (Algorithm~2 of the paper)}\label{alg:do}
+\Input{graph, types $(\mu_t,s_t)$, $k$, $T$, $\delta$, optional time limit}
+\Output{$D^\star$, $\sigma^\star$ and a certified interval $[LB^\star,UB^\star]\ni V^\star$}
+$\mathcal R\gets\{\text{the $k$ nodes with largest loot}\}$;\quad $\mathcal P_t\gets\{\Beam(s_t,\emptyset)\}$ for all $t$\;
+$UB^\star\gets\infty$;\quad $LB^\star\gets-\infty$\;
+\Repeat{nothing was added}{
+  \lIf{time limit exceeded}{\Break}
+  $(V,\ D,\ \hat v,\ \lambda)\gets\LP(\mathcal R,\mathcal P)$ \tcc*{HiGHS via SciPy; proposes strategies only}
+  $\sigma_t\gets\lambda_t/\sum_\pi\lambda_t(\pi)$ for all $t$ \tcc*{duals normalized per type}
+  drop the sets of $D$ with weight $\le10^{-9}$ and renormalize\;
+  $\mathit{added}\gets$ \KwSty{false}\;
+  \ForEach(\tcc*[f]{cheap columns first}){type $t$}{
+    $(v,\pi)\gets\Beam(s_t,D)$; \lIf{$v>\hat v_t+\varepsilon$ \KwSty{and} $\pi\notin\mathcal P_t$}{add $\pi$ to $\mathcal P_t$; $\mathit{added}\gets$ \KwSty{true}}
+  }
+  \If{\KwSty{not} $\mathit{added}$}{
+    \ForEach{type $t$}{
+      $(v,\pi,\bar v_t)\gets\ExactBR(s_t,D,T,\delta)$\;
+      \lIf{$v>\hat v_t+\varepsilon$ \KwSty{and} $\pi\notin\mathcal P_t$}{add $\pi$ to $\mathcal P_t$; $\mathit{added}\gets$ \KwSty{true}}
+    }
+    \If(\tcc*[f]{every $D$ bounds $V^\star$ from above}){$\sum_t\mu_t\bar v_t<UB^\star$}{
+      $UB^\star\gets\sum_t\mu_t\bar v_t$;\quad $D^\star\gets D$\;
+    }
+  }
+  $(B',\ell)\gets\DefBR\bigl(\{(\mu_t\sigma_t(\pi),\pi)\}_{t,\pi}\bigr)$\;
+  \If(\tcc*[f]{every $\sigma$ bounds $V^\star$ from below}){$\ell>LB^\star$}{
+    $LB^\star\gets\ell$;\quad $\sigma^\star\gets\sigma$\;
+  }
+  \lIf{$\ell<V-\varepsilon$ \KwSty{and} $B'\notin\mathcal R$}{add $B'$ to $\mathcal R$; $\mathit{added}\gets$ \KwSty{true}}
+}
+\Return{$D^\star,\ \sigma^\star,\ [LB^\star,UB^\star]$}; certified if $UB^\star-LB^\star\le3\varepsilon\max(1,UB^\star)$ and every \ExactBR call of the round that set $UB^\star$ was exact\;
+\end{algorithm}
+
+% ---------------------------------------------------------------------------
+\begin{algorithm}[h]
+\caption{Visible variant: one trap set known to the attacker}\label{alg:vis}
+\Output{$B^\star$ and a certified interval $[LB,UB]\ni V_{\mathrm{vis}}$}
+$\mathcal P_t\gets\emptyset$ for all $t$;\quad $B\gets\emptyset$;\quad $\mathit{best}\gets\infty$;\quad $LB\gets0$\;
+\While{true}{
+  $\mathit{new}\gets$ \KwSty{false};\quad $\mathit{inc}\gets0$;\quad $\mathit{ub}\gets0$\;
+  \ForEach{type $t$}{
+    $(v,\pi,\bar v)\gets\ExactBR(s_t,\{(1,B)\},T,\delta)$;\quad $\mathit{inc}\gets\mathit{inc}+\mu_tv$;\quad $\mathit{ub}\gets\mathit{ub}+\mu_t\bar v$\;
+    \lIf{$\pi\notin\mathcal P_t$}{add $\pi$ to $\mathcal P_t$; $\mathit{new}\gets$ \KwSty{true}}
+  }
+  \lIf{$\mathit{inc}<\mathit{best}$}{$(\mathit{best},B^\star,UB)\gets(\mathit{inc},B,\mathit{ub})$}
+  \lIf{\KwSty{not} $\mathit{new}$ \KwSty{or} $UB-LB\le\varepsilon\max(1,UB)$}{\Break}
+  $(LB,B)\gets\VisLB\bigl((\mathcal P_t)_t\bigr)$ \tcc*{exact master, lower bound}
+}
+$(LB,\cdot)\gets\VisLB\bigl((\mathcal P_t)_t\bigr)$\;
+\Return{$B^\star$, $[LB,UB]$}; certified if $UB-LB\le10^{-4}\max(1,UB)$ and every \ExactBR call was exact\;
+\end{algorithm}
+
+% ---------------------------------------------------------------------------
+\begin{algorithm}[h]
+\caption{Independent verification of a stored certificate}\label{alg:verify}
+\Input{randomized game: $(D,\sigma)$ and the recorded $UB$;\quad visible variant: $(B,(\mathcal P_t)_t)$ and the recorded $UB$}
+\tcc{randomized game}
+$\overline{V}\gets\sum_t\mu_t\,\bar v_t$ with $(\cdot,\cdot,\bar v_t)\gets\ExactBR(s_t,D,T,\delta)$ \tcc*{attacker over all sequences}
+$\underline{V}\gets\ell$ with $(\cdot,\ell)\gets\DefBR\bigl(\{(\mu_t\sigma_t(\pi),\pi)\}\bigr)$ \tcc*{defender over all trap sets}
+accept if $\overline V$ equals the recorded $UB$ and $\underline V\ge\overline V-\varepsilon\max(1,\overline V)$\;
+\tcc{visible variant}
+$\overline{V}\gets\sum_t\mu_t\,\bar v_t$ with $(\cdot,\cdot,\bar v_t)\gets\ExactBR(s_t,\{(1,B)\},T,\delta)$\;
+$(\underline V,\cdot)\gets\VisLB\bigl((\mathcal P_t)_t\bigr)$\;
+accept if $\underline V\ge\overline V-10^{-4}\max(1,\overline V)$\;
+\end{algorithm}
+
+\end{document}

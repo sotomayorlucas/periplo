@@ -1,0 +1,2 @@
+{"k": 2, "V_Drob_en_nominal": 0.5772227807352122, "exact": true, "Vmix_nominal": 0.576769867340745, "V0_nominal": 110.10416736861355, "Vmix_esquina": 0.892450731294146, "V0_esquina": 317.2934457900069, "V_Dnom_en_esquina": 0.924696131927113, "task": "sens:2", "rss_max_mb": 288.79296875}
+{"k": 1, "V_Drob_en_nominal": 51.79755358669303, "exact": true, "Vmix_nominal": 45.99175032808879, "V0_nominal": 110.10416736861355, "Vmix_esquina": 120.92996568819646, "V0_esquina": 317.2934457900069, "V_Dnom_en_esquina": 131.45602196321772, "task": "sens:1", "rss_max_mb": 222.50390625}

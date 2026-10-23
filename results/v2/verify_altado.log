@@ -1,0 +1,2 @@
+3 certificados re-verificados (LB y UB), 1 fallas, 3252s
+FALLA {'label': 'altado:3', 'LB': 13.863612838974197, 'LB_rec': 13.863612838974197, 'UB_rec': 25.65642732112427, 'UB': np.float64(25.07299632675814), 'mix_ok': False}

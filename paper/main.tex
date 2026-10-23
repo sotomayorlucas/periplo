@@ -1,0 +1,318 @@
+\documentclass[runningheads]{llncs}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{pgfplotstable}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage[hidelinks]{hyperref}
+\usepackage[capitalise,noabbrev]{cleveref}
+
+\input{generated/numbers.tex}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Exp}{\mathbb{E}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
+
+\begin{document}
+
+\title{Certified Randomized Deception against Multi-Target Attackers in Active Directory Attack Graphs}
+\titlerunning{Certified Randomized Deception in Active Directory}
+\author{Lucas Sotomayor}
+\authorrunning{L. Sotomayor}
+\institute{BASE4 Security, Buenos Aires, Argentina\\ \email{lasotomayor20@gmail.com}}
+
+\maketitle
+
+\begin{abstract}
+Where should a defender place a few traps (honeytoken credentials, canary objects, high-fidelity sensors) on the nodes of an Active Directory domain? We model an attacker who collects several assets under a time budget and risks detection at every step: a surviving-orienteering problem on the attack graph extracted from BloodHound data, where a pivot-switch cost $\delta$ interpolates between credential accumulation ($\delta=0$) and a single route ($\delta=\infty$). Trap placement is a Bayesian zero-sum game over unknown footholds. An index rule yields a knapsack completion bound valid for every $\delta$ and every trap mixture; since marginal loot depends only on the acquired set, the attacker's best response becomes an exact dynamic program. With exhaustive enumeration of trap sets on the defender side, a double oracle returns game values whose certificates are checked without any MILP or LP solver. On \NMain{} synthetic domains with redundant paths (\NodesMinMain--\NodesMaxMain{} nodes), the certified optimal randomized deception leaves the attacker \MixMean\% of the undefended loot, against \VisMean\% for the best fixed placement and \HeurMean\% for the best of three heuristics. On the public GOADv2 collection, modelling AD~CS abuse roughly doubles the undefended loot and changes the optimal placement; if traps can watch the final domain-takeover step, the chokepoint heuristic leaves \GoadChokeOverMixTwo{} times the optimal loot with two traps. We also report an evaluation bias of up to $\BeamBiasMax\times$ when strategies are scored against a heuristic attacker, and false optimality claims from an open-source MIP solver run with presolve disabled.
+\keywords{Deception \and Active Directory \and Orienteering \and Security games \and Double oracle \and Dynamic programming}
+\end{abstract}
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+
+Attack-path tools such as BloodHound~\cite{bloodhound} turn an Active Directory (AD) domain into a directed graph in which an arc $u\to v$ means that controlling $u$ lets an attacker take $v$: a local administrator right, a session whose credentials can be harvested, an abusable access-control entry, a certificate template that lets any user impersonate an administrator. Defenders use these graphs to remove arcs. A complementary defence is deception: instrumenting a few existing nodes with honeytoken credentials, canary objects or high-fidelity sensors, so that touching them raises a near-certain alarm. The question is which nodes.
+
+AD-specific work answers it for an attacker who follows a shortest path to Domain Admin~\cite{ngo2024catch,ngo2023near}, and randomized honeypot allocation on attack-graph edges has been studied against an attacker who chooses one path from an entry point to a target~\cite{sayed2023zeroday,sayed2023tactical}. Game models of honeypot allocation on attack graphs~\cite{durkota2015optimal,durkota2015approximate} capture a richer attacker, who plans a contingent policy, pays for actions that may fail, collects rewards on several host types and is stopped by a honeypot; there the defender adds decoy hosts of given types, and the attacker knows how many hosts of each type exist but not which are real. We study a different setting. Traps instrument existing nodes of a concrete AD graph, so where they go matters, not how many decoys of a type exist. The attacker has a time budget and runs a detection risk at every acquisition, so the order of acquisitions matters: high-value, low-risk assets should come first, because every later step may end the operation. This is an orienteering problem with a survival discount, close to the discounted-reward travelling salesman problem~\cite{blum2007orienteering}, and the defender's trap placement changes which tours are worth taking. Finally, we want randomized placements that are provably optimal, against attackers whose foothold is unknown; we obtain them for graphs of up to \NodesMaxCert{} nodes.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+\item \emph{Model.} A surviving-orienteering attacker on AD attack graphs, with a pivot-switch cost $\delta$ that interpolates between credential accumulation and a single route, and a Bayesian zero-sum deception game over unknown footholds (\cref{sec:model}).
+\item \emph{Structure and an exact best response.} The classical index rule for ordering risky tasks~\cite{rothkopf1966,kadane1969quiz} yields a knapsack completion bound that is valid for every $\delta$ and every mixture of trap sets (\cref{lem:bound}); together with the fact that marginal loot depends only on the acquired set, it gives an exact dynamic program for the attacker's best response, a problem that is NP-hard for $\delta=0$ and for $\delta=\infty$ (\cref{sec:structure}). Monotonicity reduces box-robust placement to the nominal problem at one corner.
+\item \emph{Solver-free certificates.} The defender's best response and the master problem of the visible variant are solved by enumerating all trap sets ($k\le3$). Every game value we report, and every bound where the double oracle was stopped, comes with a certificate (a defender mixture and an attacker mixture) that an independent script re-verifies with the dynamic program and enumeration only; the linear program inside the double oracle proposes strategies but certifies nothing (\cref{sec:algorithms}).
+\item \emph{Findings.} With redundant paths, certified randomized deception leaves on average \RedPct\% less loot than the best fixed placement (\RedMin--\RedMax\% across graphs), and the best of three common heuristics, chosen ex post, leaves \HeurOverMixMin--\HeurOverMixMax{} times the optimal loot. On real data, one extra arc type (AD~CS abuse) changes the decision (\cref{sec:experiments}).
+\item \emph{Methodology.} Scoring strategies with a heuristic attacker is biased in favour of the strategies optimized against it, and an open-source MIP solver returned false ``optimal'' values on our models; we describe the checks that caught both (\cref{sec:lessons}).
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+\section{Related work}\label{sec:related}
+
+\paragraph{Deception and hardening in AD and attack graphs.}
+Ngo et al.~\cite{ngo2024catch,ngo2023near} place honeypots in dynamic AD attack graphs against an attacker who follows a shortest path to Domain Admin; their ``competent'' attacker, who sees the honeypots and reroutes, corresponds to our visible variant. AD hardening by edge blocking~\cite{guo2022practical,guo2023scalable,goel2022defending} removes arcs against single-target attackers. Sayed et al.~\cite{sayed2023zeroday,sayed2023tactical} randomize honeypots placed on attack-graph edges, in zero-sum games solved by linear programming, against an attacker who chooses one path from an entry node to a target, trading the value of the nodes on it against its length; \cite{anwar2020honeypot} allocates honeypots over attack graphs in the same line of work. Milani et al.~\cite{milani2020harnessing} let the defender deceive by manipulating the attack graph itself, for instance by adding or hiding edges. Durkota et al.~\cite{durkota2015optimal,durkota2015approximate} are closest in spirit: their attacker solves an MDP or POMDP over an attack graph, with action costs, success probabilities and rewards on several host types, and a honeypot interaction ends the attack. Their defender adds honeypots by host type and the attacker observes the type counts; in \cite{durkota2015approximate} the defender randomizes. Our traps sit on specific existing nodes of a BloodHound graph, our attacker is time-budgeted with a multiplicative detection risk, and our contribution is exact certification of randomized placements on graphs of up to \NodesMaxCert{} nodes. Deception against noisy adversaries~\cite{share2018} and the broader field are surveyed in~\cite{pawlick2019taxonomy}. Attack planners model the attacker deterministically or under uncertainty~\cite{sarraute2011optimal,sarraute2012pomdps} but do not optimize the defender.
+
+\paragraph{Interdiction and network security games.}
+Sensor placement against a smuggler who chooses a path to evade detection, with an uncertain origin--destination pair, is studied by Morton et al.~\cite{morton2007models}; randomized checkpoint allocation on urban road networks by Tsai et al.~\cite{tsai2010urban}, solved with a double oracle in~\cite{jain2011double}. Interdiction games over routes, closest to our visible variant, include the TSP with interdiction and fortification~\cite{lozano2017tsp} and the orienteering interdiction game~\cite{taninmis2024orienteering}; they are deterministic and the defender's action is observed.
+
+\paragraph{Orienteering, index rules and dynamic programming.}
+The team surviving orienteers problem~\cite{jorgensen2017team} and the probabilistic orienteering problem~\cite{angelelli2017probabilistic} attach survival or availability probabilities to routes, but the risk is exogenous. The discounted-reward TSP~\cite{blum2007orienteering} and directed orienteering~\cite{nagarajan2011directed} are approximation-theoretic counterparts of our objective. Index rules for sequencing go back to Rothkopf's rule for discounted single-machine scheduling~\cite{rothkopf1966} and to Kadane's quiz show problems~\cite{kadane1969quiz}, where a failed answer ends the game. Our best response is a state-space dynamic program with a dual bound, in the spirit of domain-independent dynamic programming~\cite{kuroiwa2023didp}. We use the double oracle method~\cite{mcmahan2003planning,jain2011double}.
+
+% ---------------------------------------------------------------------------
+\section{Model}\label{sec:model}
+
+\paragraph{Attack graph.}
+From a BloodHound collection (JSON as written by SharpHound or BloodHound.py; one or several domains) we build a directed graph $G=(V,A)$ whose nodes are enabled users, computers and one node per domain (``domain compromised''). An arc $u\to v$ means that controlling $u$ suffices to acquire $v$. Arcs come from local administrator rights (with group expansion), sessions, abusable ACEs on users and computers, control of groups (treated as membership), constrained and resource-based delegation, DCSync rights, domain controllers and Domain Admins, parent--child trusts and trusts without SID filtering, AD~CS abuse (ESC1, ESC3 via enrollment agents, ESC4, ESC6, pointing to the domain of the CA) and coercion of domain controllers towards computers with unconstrained delegation (assuming a coercion primitive is available). The parser accepts JSON formats v3--v6 but was tested only on the format~v5 and v6 fixtures of BloodHound CE and on the GOADv2 collection (format~v6). Each node $v$ has a loot $r_v\ge0$, an acquisition time $p_v>0$ and a detection probability $q_v\in(0,1)$, assigned by role (\cref{tab:valuation}). These values are assumptions, not measurements; \cref{sec:sensitivity} studies how much they matter.
+
+\begin{table}[t]
+\centering
+\caption{Assumed parameters by node role: loot $r$, acquisition time $p$, detection probability $q$. DA: Domain Admins and other tier-0 accounts; user: non-privileged user. Synthetic domains have no domain nodes, draw server loot uniformly from $\{5,\dots,20\}$, and add a helpdesk role with $(r,p,q)=(2,1,0.08)$.}\label{tab:valuation}
+\small\setlength{\tabcolsep}{8pt}
+\begin{tabular}{lccccccc}
+\toprule
+ & domain & DC & server & workst. & DA & admin & user\\
+\midrule
+$r$ & 100 & 50 & 15 & 1 & 50 & 5 & 0.5\\
+$p$ & 1 & 2 & 2 & 2 & 1 & 1 & 1\\
+$q$ & 0.30 & 0.30 & 0.12 & 0.05 & 0.25 & 0.12 & 0.03\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Attacker.}
+An attacker of type $t$ starts with foothold $s_t$ and acquires a sequence $\pi=(v_1,\dots,v_m)$ of distinct nodes. Node $v_i$ must have an in-neighbour among $\{s_t,v_1,\dots,v_{i-1}\}$. Acquiring $v_i$ right after $v_{i-1}$ costs $p_{v_i}$ if $v_{i-1}\to v_i$ is an arc, and $p_{v_i}+\delta$ otherwise (a pivot switch). The total time must not exceed a budget $T$. With $\delta=0$ the attacker accumulates credentials and may continue from any owned node; with $\delta=\infty$ the sequence is a path from $s_t$. Each acquisition is detected independently with probability $q_v$; the loot $r_v$ is collected only if the acquisition of $v$ is not detected, and detection ends the intrusion. Without traps the expected loot is
+\begin{equation}\label{eq:F}
+F(\pi)=\sum_{i=1}^{m} r_{v_i}\prod_{j\le i}(1-q_{v_j}).
+\end{equation}
+Writing $\lambda_v=-\ln(1-q_v)$, $F(\pi)=\sum_i r_{v_i}e^{-\Lambda_i}$ with $\Lambda_i=\sum_{j\le i}\lambda_{v_j}$: this is a directed discounted-reward orienteering objective~\cite{blum2007orienteering} in which the discount is driven by accumulated hazard instead of time, with the time budget as a second resource. Until detection the attacker observes only that he has not been detected, so a contingent plan reduces to a sequence and restricting the attacker to sequences loses nothing.
+
+\paragraph{Traps and the game.}
+The defender places traps on a set $B$ of at most $k$ existing nodes. Acquiring a trapped node is detected with certainty, so the attacker collects nothing from it or afterwards. For a trap set $B$, $U(\pi,B)$ is \eqref{eq:F} truncated before the first trapped node; it is non-increasing in $B$. The defender commits to a mixed strategy $D$ over trap sets; the attacker knows $D$ but not its realization. The defender does not know the foothold: types $t$ have prior $\mu_t$. The game is zero-sum,
+\begin{equation}\label{eq:game}
+V^\star=\min_{D}\ \sum_t \mu_t \max_{\pi\in\Pi_t}\ \Exp_{B\sim D}\,U(\pi,B)
+=\max_{\sigma}\ \min_{B}\ \sum_t \mu_t\, \Exp_{\pi\sim\sigma_t}\,U(\pi,B),
+\end{equation}
+where $\Pi_t$ is the finite set of feasible sequences from $s_t$ and $\sigma=(\sigma_t)_t$ ranges over distributions on $\Pi_t$. The \emph{visible} variant restricts $D$ to a single set $B$ known to the attacker; its value $V_{\mathrm{vis}}\ge V^\star$. We report values as fractions of the undefended loot $V_0=\sum_t \mu_t\max_{\pi\in\Pi_t}F(\pi)$.
+
+% ---------------------------------------------------------------------------
+\section{Structure}\label{sec:structure}
+
+Fix a trap set $B$ and let $c_v=1-q_v$ for $v\notin B$ and $c_v=0$ for $v\in B$, so that $U(\pi,B)=\sum_i r_{v_i}\prod_{j\le i}c_{v_j}$. Let $\rho_v=r_vc_v/(1-c_v)$, which is finite because $q_v>0$, and for a set $X$ of nodes let $H(X)$ be the value of $X$ ordered by decreasing $\rho$, ignoring precedences and times. Ties in $\rho$ do not change the value (see the proof below), so $H$ is well defined.
+
+\begin{proposition}[index rule~\cite{rothkopf1966,kadane1969quiz}]\label{prop:index}
+Over all orders of a set $X$, $\rho$-order maximizes $U$.
+\end{proposition}
+\begin{proof}
+Swapping adjacent nodes $i,j$ with prefix survival $s$ leaves all other terms unchanged and changes the value by $s\,[\,r_jc_j(1-c_i)-r_ic_i(1-c_j)\,]$, which has the sign of $\rho_j-\rho_i$ when $c_i,c_j<1$. Sorting by adjacent swaps that never decrease the value reaches $\rho$-order. \qed
+\end{proof}
+
+For a mixture $D=\{(w_b,B_b)\}$, write $c_v^b$, $\rho^b$ and $H_b$ for scenario $b$, and $s_b(P)=\prod_{u\in P}c_u^b$ for the survival of an acquired set $P$. For $X\subseteq V$ and $\tau\ge0$ let
+\[
+K_b^X(\tau)=\max\Bigl\{H_b(Y):\ Y\subseteq V\setminus(B_b\cup X),\ \textstyle\sum_{v\in Y}p_v\le\tau\Bigr\}.
+\]
+
+\begin{lemma}[completion bound]\label{lem:bound}
+Let a feasible sequence for any $\delta\ge0$ start with a prefix that acquires the set $P$ in time $t$, and let $X\subseteq P$. The expected loot that the sequence collects after the prefix is at most $\sum_b w_b\,s_b(P)\,K_b^X(T-t)$. In particular ($P=\emptyset$), $\Exp_{B\sim D}U(\pi,B)\le\sum_b w_bK_b^{\emptyset}(T)$ for every feasible $\pi$.
+\end{lemma}
+\begin{proof}
+In scenario $b$, the loot collected after the prefix is $s_b(P)$ times the loot of the remaining nodes started from survival~1 and truncated before their first trap. The nodes acquired in that truncated part form a set $Y$ disjoint from $P\cup B_b\supseteq X\cup B_b$, and their acquisition times sum to at most $T-t$ because pivot costs are non-negative. By \cref{prop:index} their loot is at most $H_b(Y)\le K_b^X(T-t)$. Average over $b$. \qed
+\end{proof}
+
+$K_b^X(\cdot)$ is computed for all $\tau$ at once by a knapsack dynamic program that scans $V\setminus(B_b\cup X)$ in reverse $\rho^b$-order with the Horner step $x\mapsto c_v^b(r_v+x)$; for integer times it takes $O(|V|\,T)$ time. Excluding $X$ is optional, since any $X\subseteq P$ keeps the bound valid, but it matters in practice (\cref{sec:algorithms}).
+
+\begin{proposition}[set sufficiency]\label{prop:sets}
+After a prefix that acquires $P$, the expected marginal loot of acquiring $v$ next is $r_v\sum_b w_b\,s_b(P\cup\{v\})$, which depends on $P$ but not on its order. Consequently an optimal sequence can be found by a dynamic program whose states are the sets $P$ (for $\delta=0$), the pairs $(P,\text{last node})$ (for $\delta=\infty$), or the pairs $(P,\text{last node})$ with a Pareto set of (time, value) labels (for finite $\delta>0$), keeping for each state only the best value (respectively the non-dominated labels).
+\end{proposition}
+\begin{proof}
+The value of a sequence is the value of its prefix plus the loot of its continuation, and by the first claim the latter depends on the prefix only through $P$. For $\delta=0$, the prefix also determines the feasible continuations only through $P$: the frontier is the set of out-neighbours of $P\cup\{s_t\}$ and the elapsed time is $\sum_{v\in P}p_v$. For $\delta=\infty$ the next node must be an out-neighbour of the last one, and the elapsed time is again $\sum_{v\in P}p_v$. For finite $\delta>0$ the elapsed time depends on the number of pivot switches, so it becomes a label; a prefix with no less time and no more value than another with the same $(P,\text{last})$ admits no better completion. In all three cases an exchange of prefixes with the same state yields the principle of optimality. \qed
+\end{proof}
+
+\paragraph{Complexity.}
+The best response is NP-hard already without traps, for $\delta=0$ and for $\delta=\infty$. For $\delta=0$, take a star with centre $s_t$, integer loot $r_v$ and times $p_v$, and $q_v=\varepsilon$: for $\varepsilon$ small enough (polynomially many bits), the optimum exceeds $L-1$ if and only if some set of total time at most $T$ has total loot at least $L$, which is 0--1 knapsack. For $\delta=\infty$, take $r_v=p_v=1$, $q_v=\varepsilon$ and $T=|V|-1$: the optimum exceeds $|V|-2$ if and only if $G$ has a Hamiltonian path from $s_t$. The dynamic program has at most $\sum_{i\le K}\binom{n}{i}$ states for $\delta=0$, and $n$ times as many for $\delta>0$ (times the labels for finite $\delta$), where $n$ is the number of nodes reachable within $T$ and $K=\lfloor T/\min_v p_v\rfloor$; $K=12$ in our main experiments and up to 24 in the perturbed instances of \cref{sec:sensitivity}.
+
+\begin{proposition}[box robustness]\label{prop:robust}
+For every defender strategy $D$, the attacker's optimal expected loot is non-decreasing in each $r_v$ and non-increasing in each $q_v$ and each $p_v$. Hence, if each parameter ranges over an interval, the worst case over the box is attained at the corner $(r^+,q^-,p^-)$ for all $D$ simultaneously, and the box-robust placement is the nominal optimum at that corner.
+\end{proposition}
+\begin{proof}
+For fixed $\pi$ and $B$, $U$ is non-decreasing in $r$ and non-increasing in $q$; lowering $p$ only enlarges the feasible set. Maxima over larger sets of larger functions are larger, and expectation over $D$ preserves the order. \qed
+\end{proof}
+
+The proposition concerns absolute loot. Since $V_0$ also changes with the parameters, statements in percent of $V_0$ need care (\cref{sec:sensitivity}).
+
+\paragraph{Defender best response.}
+For a fixed attacker strategy $\sigma$, the defender minimizes $\sum_t\mu_t\Exp_{\pi\sim\sigma_t}U(\pi,B)$, equivalently maximizes $\sum_j \omega_j \max_{b\in B\cap\pi_j}L_j(b)$, where $\omega_j$ is the weight of sequence $\pi_j$ and $L_j(b)$ is its loot from the position of $b$ onwards: a facility-location objective, monotone and submodular in $B$. Since $U$ is non-increasing in $B$, sets of size exactly $k$ suffice. For $k\le3$ we enumerate all $\binom{|V|}{k}$ of them (at most \EnumSetsMax{} here): for each sequence, the value under $B$ is its prefix loot before $\min_{b\in B}\mathrm{pos}(b)$, which vectorizes over all sets.
+
+% ---------------------------------------------------------------------------
+\section{Algorithms}\label{sec:algorithms}
+
+\begin{algorithm}[t]
+\caption{Exact attacker best response against a trap mixture $D=\{(w_b,B_b)\}$}\label{alg:dp}
+\begin{algorithmic}[1]
+\Require foothold $s$, budget $T$, switch cost $\delta$, incumbent $(v^\star,\pi^\star)$ from a beam search
+\State $\mathcal L\gets\{\text{root state}\}$; \textsc{bnd}$(P,t)\mathrel{:=}\sum_b w_b\,s_b(P)\,K_b^{P\cap X_{12}}(T-t)$, memoized by $P\cap X_{12}$
+\While{$\mathcal L\neq\emptyset$}\Comment{layer by layer in $|P|$}
+  \State $\mathcal L'\gets\emptyset$
+  \For{each state $(P,\text{last})$ and label $(\mathit{val},t,\pi)$ in $\mathcal L$}
+    \If{$\mathit{val}+\textsc{bnd}(P,t)\le v^\star$} \textbf{continue} \EndIf
+    \For{each $v\notin P$ that can follow (frontier of $P$, or out-neighbour of last for $\delta=\infty$)}
+      \State $t'\gets t+p_v$ (+$\delta$ on a pivot switch); \textbf{if} $t'>T$ \textbf{continue}
+      \State $\mathit{val}'\gets\mathit{val}+r_v\sum_b w_b\,s_b(P\cup\{v\})$; update $(v^\star,\pi^\star)$ if $\mathit{val}'>v^\star$
+      \If{$\mathit{val}'+\textsc{bnd}(P\cup\{v\},t')>v^\star$} insert $(\mathit{val}',t',\pi v)$ into $\mathcal L'$ with dominance \EndIf
+    \EndFor
+  \EndFor
+  \State $\mathcal L\gets\mathcal L'$
+\EndWhile
+\State \Return $(v^\star,\pi^\star)$ \Comment{on a state or time limit: $\max(v^\star,\max_{\text{open}}\mathit{val}+\textsc{bnd})$ is an upper bound}
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Exact attacker best response.}
+\Cref{alg:dp} implements \cref{prop:sets} with the pruning of \cref{lem:bound}. A state does not store its survival vector $(s_b(P))_b$; it is recomputed from $P$ when the state is expanded, which keeps memory proportional to the number of states. The completion bound excludes $X=P\cap X_{12}$, where $X_{12}$ are the twelve reachable nodes with the largest loot; the bounds are memoized by which of them are owned. Without the exclusion, the bound keeps counting high loot that has already been collected. \Cref{tab:ablation} shows the effect on \AblGoadN{} GOADv2 best responses and \AblSynN{} synthetic ones, each against a certified optimal mixture. On GOADv2 with AD~CS, $\delta=0$ and one trap, the plain bound did not finish within the time limit on the \AblPlainFail{} footholds of the second forest, after more than \AblPlainFailStates{} million states each, while the exclusion solves them with at most \AblFailWithExcl{} states. On the synthetic sample the exclusion matters little: the plain bound expands \AblSynTotalDiff\% more states in total (at most \AblSynMaxAbsDiff{} more in one best response) and is faster, because it computes fewer knapsacks. Excluding every owned node is much slower still, because the knapsack is recomputed at every state. We use twelve excluded nodes throughout; on GOADv2 four already suffice.
+
+\begin{table}[t]
+\centering
+\caption{Ablation of the completion bound: number of excluded owned high-value nodes ($0$ = plain bound; all = every owned node, recomputing the knapsack at every state). Same incumbent for all variants; limits $3\cdot10^6$ states and 300~s of wall-clock time per best response (run at low priority next to other jobs). States: median / maximum over the best responses that the variant solved, excluding those that expand no state (many GOADv2 footholds reach no loot); time: maximum CPU time over all best responses.}\label{tab:ablation}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrr}
+\toprule
+instances & excluded & solved & states (med. / max) & max time (s)\\
+\midrule
+\input{generated/tab_ablation.tex}\end{tabular}
+\end{table}
+
+\begin{algorithm}[t]
+\caption{Certified double oracle}\label{alg:do}
+\begin{algorithmic}[1]
+\State attacker pools $\mathcal P_t\gets\{\text{undefended beam sequence}\}$; defender pool $\mathcal R\gets\{\text{top-}k\text{ loot}\}$; $LB\gets-\infty$, $UB\gets\infty$
+\Repeat
+  \State solve the restricted game on $(\mathcal R,\mathcal P)$ by linear programming: $D$, $\sigma$, values $\hat v_t$
+  \State add to $\mathcal P_t$ any beam-search sequence that beats $\hat v_t$
+  \If{nothing was added}
+    \State run \cref{alg:dp} for every type; add improving sequences
+    \State \textbf{if} $\sum_t\mu_t\,\overline{v}_t<UB$ \textbf{then} $UB\gets\sum_t\mu_t\,\overline{v}_t$, $D^{UB}\gets D$ \Comment{$\overline v_t$: bound of \cref{alg:dp}}
+  \EndIf
+  \State $B'\gets\argmin_{|B|=k}\sum_t\mu_t\Exp_{\sigma_t}U(\pi,B)$ by enumeration, with value $\ell$
+  \State \textbf{if} $\ell>LB$ \textbf{then} $LB\gets\ell$, $\sigma^{LB}\gets\sigma$; \quad add $B'$ to $\mathcal R$ if $\ell<\sum_t\mu_t\hat v_t$
+\Until{nothing was added, or a time limit}
+\State \Return $D^{UB}$, $\sigma^{LB}$, $[LB,UB]\ni V^\star$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Certified double oracle.}
+\Cref{alg:do} is the double oracle~\cite{mcmahan2003planning,jain2011double} with cheap attacker columns first and exact ones only when the beam search finds nothing. Every defender mixture $D$ evaluated by \cref{alg:dp} gives an upper bound on $V^\star$, and every attacker strategy $\sigma$ evaluated by enumeration gives a lower bound, by the two sides of \eqref{eq:game}. The pair $(D^{UB},\sigma^{LB})$ is the certificate. Checking it needs only \cref{alg:dp} and the enumeration, not the linear program (solved with HiGHS through SciPy), which merely proposes strategies; a wrong LP solution can slow convergence but cannot produce a false certificate. We stop when nothing is added (column tolerance $10^{-6}$); on convergence, all our relative gaps are below $\GapMaxConv$. With a time limit, checked at the start of each iteration, the algorithm still returns a certified interval. The visible variant is solved by the same loop with a single trap set: the master problem $\min_B\sum_t\mu_t\max_{\pi\in\mathcal P_t}U(\pi,B)$ is a lower bound solved by enumeration, the chosen $B$ is evaluated by \cref{alg:dp}, and the loop stops when the two meet; its certificate is $B$ with the pools.
+
+\paragraph{Bounds we tried first.}
+Before the dynamic program we tried MILP bounds: a position-indexed formulation with valid inequalities (adjacent-swap dominance, per-position survival bounds, trap cuts, a chord of $e^{-\Lambda}$), a set-based MILP that relaxes only the order, and scenario-group bounds~\cite{sandikci2013hierarchy}. On best responses against mixtures of 20--25 trap sets at 95 nodes, the set-based bound after 300~s of SCIP~10.0~\cite{scip} was still \SetBoundMin--\SetBoundMax{} times the best known value, and on GOADv2 the certificates obtained with MILP bounds had gaps of up to \MilpGapMax{} points of $V_0$.
+
+% ---------------------------------------------------------------------------
+\section{Experiments}\label{sec:experiments}
+
+\paragraph{Setup.}
+Synthetic domains come from a SharpHound-like generator with three path-redundancy profiles (low, medium, high): local credential reuse with probability 0.02, 0.05 and 0.12, one helpdesk account per 20, 12 and 8 workstations, and one abusable ACL per 12, 8 and 4 workstations. With medium redundancy, 40 workstations give graphs of 81--95 nodes (seeds 1--8); with 60 workstations each profile has seeds 1--3 and 139--143 nodes. Each synthetic instance has five footholds (random workstations, uniform prior), $k=3$ traps and $T=12$. The real data set is the public collection of GOADv2~\cite{goad,bhsample}, taken with SharpHound~2.3.3 (JSON format v6): three domains, two forests and 46 effective nodes, with 22 footholds (the non-privileged users, uniform prior) and $T=12$. Mixtures and visible placements optimize over all nodes; the heuristics (most valuable nodes, betweenness, chokepoints of shortest paths to tier~0) and the uniform baseline (64 random $k$-sets) exclude footholds. The chokepoint heuristic is our proxy for placements designed against shortest-path attackers~\cite{ngo2024catch}; it is not their optimization algorithm. Best responses are limited to $3\cdot10^6$ states and 600~s of wall-clock time and seeded with a beam search of width~50; the cheap columns of \cref{alg:do} use a beam of width~150. Every value is computed with \cref{alg:dp}, and no limit was reached in any reported value unless marked. The software is Python~3 with NumPy and SciPy, on a cloud machine with 2~vCPUs and 7~GB of memory, running two single-threaded jobs at a time; we report CPU time. All \NCert{} zero-gap certificates and the \NInterval{} intervals of \cref{tab:synth} were re-verified by a separate script that recomputes the lower bounds by enumeration and the upper bounds with \cref{alg:dp}. The upper-bound side therefore relies on \cref{alg:dp}, which we checked against exhaustive enumeration on \NTestExact{} random instances ($\delta\in\{0,1,2.5,\infty\}$, mixtures of 1--4 trap sets), as we did for the enumeration and for the double oracle (\NTestGame{} fully enumerated games). Code, data and all certificates are available at \url{https://github.com/sotomayorlucas/periplo}.
+
+\begin{table}[t]
+\centering
+\caption{Synthetic domains, $\delta=0$, $k=3$: attacker loot as \% of $V_0$ (means over graphs). Ratio: randomized/visible, mean (range). Heur.: best of three heuristics per graph. DO: median CPU time of the certified double oracle. $^\dagger$High redundancy: the visible placement is certified; for the mixture we report the certified upper bound on $V^\star$ left by a double oracle stopped after about one hour (gaps of up to \AltaGapMax{} points of $V_0$).}\label{tab:synth}
+\small\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrrcrrr}
+\toprule
+redund. & graphs & nodes & random. & visible & ratio & heur. & unif. & DO (s)\\
+\midrule
+\input{generated/tab_synth.tex}\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\pgfplotstableread[col sep=&]{generated/fig_strategies.dat}\stratdata
+\begin{tikzpicture}
+\begin{axis}[width=0.55\linewidth, height=4.2cm, scale only axis=false, xmin=0, xmax=100,
+  xlabel={attacker loot (\% of undefended)}, ytick=data, yticklabels from table={\stratdata}{name},
+  yticklabel style={font=\small}, xticklabel style={font=\small}, xlabel style={font=\small},
+  enlarge y limits=0.2, axis x line*=bottom, axis y line*=left]
+\addplot+[only marks, mark=*, black,
+  error bars/.cd, x dir=both, x explicit]
+  table[x=mean, y expr=\coordindex, x error minus expr=\thisrow{mean}-\thisrow{lo}, x error plus expr=\thisrow{hi}-\thisrow{mean}] {\stratdata};
+\end{axis}
+\end{tikzpicture}
+\caption{Loot left to the attacker by each strategy on the \NMain{} synthetic graphs with medium redundancy ($\delta=0$, \NodesMinMain--\NodesMaxMain{} nodes, $k=3$): mean, minimum and maximum over graphs.}\label{fig:strategies}
+\end{figure}
+
+\paragraph{Synthetic domains.}
+\Cref{tab:synth} and \cref{fig:strategies} summarize the results at $\delta=0$, one row per size and redundancy profile. With medium redundancy, the optimal randomized deception leaves \MixMean\% of the undefended loot on average over \NMain{} graphs, against \VisMean\% for the optimal visible placement; the ratio is \RatioMean{} on average and ranges from \RatioMin{} to \RatioMax{}, and on \NRatioOne{} of the \NMain{} graphs randomization gains less than 1\%. A ratio of at most one is guaranteed ($V^\star\le V_{\mathrm{vis}}$); the finding is its size and its variation across graphs. The best of three heuristics, chosen ex post per graph, leaves \HeurMean\%, which is \HeurOverMixMin--\HeurOverMixMax{} times the optimum; uniform random placement leaves \UnifMean\%. Against the optimal mixture, an attacker who ignores the traps and plays his undefended optimum collects \NaiveMean\%, against \MixMean\% for the best-responding attacker. The optimal mixtures use \SuppMin--\SuppMax{} distinct trap sets, so in practice they amount to rotating traps. With low redundancy, the optimal fixed placement is already almost optimal (ratio \LowRatioMin--\LowRatioMax), although the heuristics still leave much more loot. With high redundancy (143 nodes) the exact double oracle did not converge: stopped after the first iteration past one hour (\AltaTmin--\AltaTmax{} minutes of wall-clock time), it left certified intervals with gaps of up to \AltaGapMax{} points of $V_0$. These suffice for the comparison: on \AltaWinsText{} graphs the certified upper bound on $V^\star$ is below the certified optimal visible placement, so randomization provably beats every fixed placement there. Certifying one of the three visible placements required evaluating a second candidate set, because two best responses against the first one reached the state limit.
+
+\begin{table}[t]
+\centering
+\caption{Effect of the pivot-switch cost on four synthetic graphs (81--95 nodes, medium redundancy): loot as \% of $V_0$ (means), ratio randomized/visible mean (range), median CPU time of the double oracle and largest number of states in one best response.}\label{tab:delta}
+\small\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrcrr}
+\toprule
+$\delta$ & random. & visible & ratio & DO (s) & max states\\
+\midrule
+\input{generated/tab_delta.tex}\end{tabular}
+\end{table}
+
+\Cref{tab:delta} varies $\delta$ on four of the graphs. Ratios stay between \DeltaRatioMin{} and \DeltaRatioMax{} on average for every $\delta$, while the double oracle is \TdoRatio{} times slower at $\delta=0$ than at $\delta=\infty$ (median CPU time): on these four graphs the cost of $\delta$ is computational rather than qualitative. On two of the four graphs, $\delta=3$ and $\delta=\infty$ give identical values of $V_0$, of the mixture and of the visible placement.
+
+\begin{table}[t]
+\centering
+\caption{GOADv2 (46 nodes, 22 footholds, $T=12$): attacker loot as \% of $V_0$. Randomized and visible values are certified optimal; the other columns are exact values of the heuristic placements and of the uniform baseline (64 random $k$-sets). $^\ast$Traps only on users and computers, not on domain nodes.}\label{tab:goad}
+\small\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llrrrrrrrr}
+\toprule
+model & $\delta$ & $V_0$ & $k$ & random. & visible & chokep. & top loot & betw. & unif.\\
+\midrule
+\input{generated/tab_goad.tex}\end{tabular}
+\end{table}
+
+\paragraph{Real data: GOADv2.}
+\Cref{tab:goad} shows that one arc type changes the answer. $V_0$ averages over all 22 footholds, \GoadZeroNo{} of which reach no loot at all without AD~CS (\GoadZeroAdcs{} with it). Without AD~CS, a single trap on the domain controller of the root domain (KINGSLANDING) leaves the attacker about \GoadVisNoOne\% of the undefended loot, and randomization adds almost nothing. With AD~CS, the non-privileged users of the second forest can obtain its domain in one step through ESC6 (one of them through ESC4), the undefended loot roughly doubles, and no single trap covers both forests. With one trap ($\delta=\infty$), the optimal mixture spreads over the domain node of that forest, KINGSLANDING and the root domain, and leaves \GoadMixAdcsOne\% against \GoadVisAdcsOne\% for the best fixed trap. With two traps, the optimum is essentially $\{\text{ESSOS.LOCAL},\text{KINGSLANDING}\}$ and leaves \GoadMixAdcsTwo\%; the chokepoint heuristic traps the root domain node instead of its domain controller and leaves \GoadChokeAdcsTwo\%, \GoadChokeOverMixTwo{} times as much. Each of the 12 games is certified in at most \GoadCpuMax~s of CPU time.
+
+These AD~CS results rely on traps placed on domain nodes, which stand for the final takeover step. We read such a trap as high-fidelity detection of that step, for instance of replication requests from hosts that are not domain controllers or of certificate requests whose subject differs from the requester; whether such detection is near-certain is an assumption. If traps may only sit on users and computers (rows AD~CS$^\ast$), nothing can intercept the one-step ESC6 takeover. With one trap the mixture still beats the best fixed trap (\GoadNdMixOne\% against \GoadNdVisOne\%), with two traps randomization gives nothing (\GoadNdMixTwo\% against \GoadNdVisTwo\%), and the heuristics leave about \GoadNdHeurTwo\% of the loot. Without AD~CS the optimal placements never use domain nodes, so the restriction changes nothing there. The collection was taken without privileges (no local administrators of member servers, five sessions), so one of the three domains shows no paths at all; real use needs a privileged collection.
+
+\subsection{Sensitivity to the assumed parameters}\label{sec:sensitivity}
+
+\begin{table}[t]
+\centering
+\caption{GOADv2 with AD~CS, $\delta=\infty$: perturbing the assumed $(r,p,q)$. Outcome: randomized wins / ties ($\le0.01$ points) against the re-optimized visible placement. Advantage: visible minus randomized, in points of $V_0$. Regret: cost of keeping the nominal mixture instead of re-optimizing, in points of $V_0$ (median / max). All \SensCount{} perturbed games are certified.}\label{tab:sens}
+\small\setlength{\tabcolsep}{3pt}
+\begin{tabular}{rlrrrr}
+\toprule
+$k$ & perturbation & cases & win / tie & advantage & regret\\
+\midrule
+\input{generated/tab_sens.tex}\end{tabular}
+\end{table}
+
+\Cref{tab:sens} perturbs the parameters of \cref{tab:valuation} by $\pm50\%$ on GOADv2 with AD~CS and $\delta=\infty$, one role parameter at a time (the six server cases leave every value unchanged) and as independent per-node noise. With one trap, randomization wins in every case, and keeping the nominal mixture costs at most \SensRegretMaxOne{} points of $V_0$ (under per-node noise); among single role parameters, the largest effects come from the detection probability and loot of domains and domain controllers (up to \SensRegretMaxRoleOne{} points). With per-node noise, the best fixed trap changes in \SensVisChange{} of 20 cases. With two traps, the same pair is optimal in every case and randomization gives no measurable advantage (at most 0.01 points). These conclusions concern this collection only.
+
+By \cref{prop:robust}, the box-robust placement for the box $[0.5,1.5]$ on every parameter is the nominal optimum at the corner $(1.5r,0.5q,0.5p)$, where $V_0$ is \CornerVzeroOne{} times larger. In absolute loot, with one trap, playing the corner-robust mixture in the nominal scenario costs \PriceRobAbsOne{} (\PriceRobPctOne{} points of the nominal $V_0$), while playing the nominal mixture at the corner costs \RegretCornerAbsOne{} (\RegretCornerPctOne{} points of the nominal $V_0$). The two costs are of the same order, so neither choice dominates: which to prefer depends on how plausible the corner is, and the corner is extreme. A minimax-regret criterion over the box is the natural next step.
+
+% ---------------------------------------------------------------------------
+\section{Two lessons on evaluation}\label{sec:lessons}
+
+\paragraph{Heuristic attackers flatter the strategies optimized against them.}
+Our first experiments ran the double oracle with a beam-search attacker (width 400, checked at 1500) and scored every strategy with the same beam, on the sixteen configurations of \cref{tab:delta}. Re-evaluated exactly, those mixtures are worth up to \BeamBiasMax{} times what the beam reported. The bias is concentrated: it exceeds 5\% in \BeamBiasOverFive{} of the 16 configurations, all with $\delta=0$, and the beam was exact in \BeamExactOther{} of the 12 configurations with $\delta>0$. The bias is not neutral, because a mixture optimized against the beam exploits the beam's blind spots: in \BeamWorseCount{} configuration the beam-optimized mixture was worse than the optimal visible placement, reversing the comparison. On average the bias was small (the beam reported \BeamAvgReported\% of $V_0$ for mixtures worth \BeamAvgExact\%), but individual comparisons did not all survive.
+
+\paragraph{Solver answers need independent checks.}
+On three of our MILPs (96--152 integer variables), HiGHS~1.15.1~\cite{huangfu2018parallelizing}, run with the non-default option \texttt{presolve=off}, declared optimality after the root node with objective 59.45, 0 and 1.84, where the true optima are 68.70, 68.70 and 59.19. We had turned presolve off after earlier wrong answers with presolve on, on instances we did not keep; with default options these three models are solved correctly. The true optima were confirmed by exhaustive enumeration, by CBC~2.10.3 and SCIP~10.0, and by fixing SCIP's integer solution in HiGHS itself. The same values appear in versions 1.12--1.15, also with one thread, and the development branch built from source in October 2026 returns the true optima. The present certificates do not depend on any MILP or LP solver (\cref{sec:algorithms}).
+
+% ---------------------------------------------------------------------------
+\section{Limitations}
+
+The synthetic domains come from our own generator, and the parameters of \cref{tab:valuation} are assumptions; \cref{sec:sensitivity} tests one real collection, which is small, unprivileged and from a lab. The model assumes traps that detect with certainty, independent detection events, an attacker who knows the graph and the defender's mixture, and no adaptive response by the defender. The exact dynamic program is exponential in the worst case. At 81--95 nodes a certified game took \TcpuMainMin--\TcpuMainMax{} minutes of CPU time, at 141 nodes \TcpuBigMin--\TcpuBigMax{} minutes, and at 143 nodes with high redundancy the double oracle did not converge within one hour (remaining gap up to \AltaGapMax{} points of $V_0$). Enumerating trap sets limits the certified defender side to small $k$.
+
+% ---------------------------------------------------------------------------
+\section{Conclusion}
+
+Modelling the attacker as a multi-target, time-bounded, detection-averse operator changes where deception should go and whether it should be randomized. With redundant paths, certified randomized deception leaves on average \RedPct\% less loot than the best fixed placement (between \RedMin\% and \RedMax\% depending on the graph), and common heuristics leave several times the optimal loot. A single additional arc type, AD~CS abuse, is enough to change the decision on a real collection. An index-based completion bound and set sufficiency make the attacker's best response exact, and enumeration on the defender side makes every reported value checkable without trusting a solver, for graphs of up to \NodesMaxCert{} nodes and $k\le3$. Scaling the exact oracle to thousands of nodes, grounding the parameters in measured detection rates, and minimax-regret placement are the next steps.
+
+\bibliographystyle{splncs04}
+\bibliography{refs}
+
+\end{document}

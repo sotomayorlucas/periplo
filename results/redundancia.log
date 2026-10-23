@@ -1,0 +1,9 @@
+{"exp": "redundancia", "scale": 60, "seed": 1, "redundancy": "baja", "delta": 0.0, "n": 139, "V0": 32.992344283548135, "Vmix": 0.5579344517348307, "Vvis": 0.5646855, "t_total": 9.526587009429932, "error": null}
+{"exp": "redundancia", "scale": 60, "seed": 2, "redundancy": "baja", "delta": 0.0, "n": 139, "V0": 23.772980060161252, "Vmix": 0.194, "Vvis": 0.194, "t_total": 1.700911045074463, "error": null}
+{"exp": "redundancia", "scale": 60, "seed": 3, "redundancy": "baja", "delta": 0.0, "n": 139, "V0": 4.736124872089974, "Vmix": 0.4676855, "Vvis": 0.4676855, "t_total": 0.633415937423706, "error": null}
+{"exp": "redundancia", "scale": 60, "seed": 1, "redundancy": "media", "delta": 0.0, "n": 141, "V0": 75.58847811584, "Vmix": 6.819709445677468, "Vvis": 8.945345606530605, "t_total": 114.51650071144104, "error": null}
+{"exp": "redundancia", "scale": 60, "seed": 2, "redundancy": "media", "delta": 0.0, "n": 141, "V0": 39.64123681527152, "Vmix": 5.125592442947226, "Vvis": 3.8994652029543877, "t_total": 29.653486967086792, "error": null}
+{"exp": "redundancia", "scale": 60, "seed": 3, "redundancy": "media", "delta": 0.0, "n": 141, "V0": 60.22002581323439, "Vmix": 10.058585595416782, "Vvis": 12.87490399249674, "t_total": 73.23552775382996, "error": null}
+{"exp": "redundancia", "scale": 60, "seed": 1, "redundancy": "alta", "delta": 0.0, "n": 143, "V0": 83.87865349216, "Vmix": 7.5936788476212005, "Vvis": 8.490651778710085, "t_total": 209.40779328346252, "error": null}
+{"exp": "redundancia", "scale": 60, "seed": 2, "redundancy": "alta", "delta": 0.0, "n": 143, "V0": 87.89190473983301, "Vmix": 11.34631633085294, "Vvis": 14.976221728692355, "t_total": 194.9480037689209, "error": null}
+{"exp": "redundancia", "scale": 60, "seed": 3, "redundancy": "alta", "delta": 0.0, "n": 143, "V0": 88.90965129177201, "Vmix": 15.8443976082303, "Vvis": 30.91834968933047, "t_total": 181.69807744026184, "error": null}

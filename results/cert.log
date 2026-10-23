@@ -1,0 +1,3 @@
+{"exp": "cert", "scale": 15, "seed": 1, "redundancy": "media", "delta": 0.0, "n": 42, "V0": 40.946904503842646, "Vmix": 1.1542713339464892, "Vvis": 1.18753096325, "t_total": 329.6118140220642, "error": null}
+{"exp": "cert", "scale": 15, "seed": 2, "redundancy": "media", "delta": 0.0, "n": 42, "V0": 57.04040762374001, "Vmix": 0.8459855, "Vvis": 0.8459855, "t_total": 369.21183681488037, "error": null}
+{"exp": "cert", "scale": 15, "seed": 3, "redundancy": "media", "delta": 0.0, "n": 42, "V0": 80.436634999168, "Vmix": 5.507619944895163, "Vvis": 6.624361611464012, "t_total": 1245.1188547611237, "error": null}

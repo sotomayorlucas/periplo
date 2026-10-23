@@ -1,0 +1,48 @@
+[17:42:40] goad:0:inf:2 (est 400s, quedan 6900s)
+[17:43:01] goad:0:inf:2 listo en 22s
+[17:43:01] goad:0:0:1 (est 400s, quedan 6878s)
+[17:44:24] goad:0:0:1 listo en 83s
+[17:44:24] goad:0:0:3 (est 400s, quedan 6795s)
+[17:45:50] goad:0:0:3 listo en 86s
+[17:45:50] goad:1:inf:3 (est 400s, quedan 6709s)
+[17:46:35] goad:1:inf:3 listo en 45s
+[17:46:35] goad:1:0:2 (est 400s, quedan 6664s)
+[17:49:53] goad:1:0:2 listo en 198s
+[17:49:53] synth:media:40:1:0.0 (est 615s, quedan 6466s)
+[17:55:37] synth:media:40:1:0.0 listo en 344s
+[17:55:37] synth:media:40:3:0.0 (est 1506s, quedan 6122s)
+[18:14:13] synth:media:40:3:0.0 listo en 1116s
+[18:14:13] synth:media:40:5:0.0 (est 1725s, quedan 5007s)
+[19:15:41] synth:media:40:5:0.0 listo en 3688s
+[19:15:41] synth:baja:60:1:0.0 (est 44s, quedan 1319s)
+[19:16:15] synth:baja:60:1:0.0 listo en 34s
+[19:16:15] synth:baja:60:2:0.0 (est 13s, quedan 1285s)
+[19:16:24] synth:baja:60:2:0.0 listo en 9s
+[19:16:24] sens:2 (est 2400s, quedan 1276s)
+[19:29:50] sens:2 listo en 806s
+[19:29:50] synth:media:40:1:inf (est 129s, quedan 470s)
+[19:31:05] synth:media:40:1:inf listo en 75s
+[19:31:05] synth:media:40:2:inf (est 321s, quedan 395s)
+[19:34:51] synth:media:40:2:inf listo en 226s
+[19:34:51] synth:media:40:4:inf (est 118s, quedan 168s)
+[19:36:03] synth:media:40:4:inf listo en 72s
+trabajador terminó; pendientes: ['synth:media:60:1:0.0', 'synth:media:60:3:0.0', 'sens:1', 'synth:media:40:3:inf', 'synth:media:40:1:3.0', 'synth:media:40:2:3.0', 'synth:media:40:3:3.0', 'synth:media:40:4:3.0', 'synth:media:40:1:1.0', 'synth:media:40:2:1.0', 'synth:media:40:3:1.0', 'synth:media:40:4:1.0', 'alta:1', 'alta:2', 'alta:3']
+[19:36:13] synth:media:60:1:0.0 (est 5721s, quedan 6900s)
+[20:14:50] synth:media:60:1:0.0 listo en 2318s
+[20:14:50] synth:media:40:1:3.0 (est 183s, quedan 4582s)
+[20:16:30] synth:media:40:1:3.0 listo en 100s
+[20:16:30] synth:media:40:3:3.0 (est 376s, quedan 4483s)
+[20:20:05] synth:media:40:3:3.0 listo en 216s
+[20:20:05] synth:media:40:4:3.0 (est 159s, quedan 4267s)
+[20:21:32] synth:media:40:4:3.0 listo en 87s
+[20:21:32] synth:media:40:2:1.0 (est 1067s, quedan 4181s)
+[20:31:16] synth:media:40:2:1.0 listo en 584s
+trabajador terminó; pendientes: ['synth:media:40:4:1.0', 'alta:1', 'alta:2', 'alta:3', 'altado:1', 'altado:2', 'altado:3']
+[20:31:29] alta:1 (est 4500s, quedan 7080s)
+[20:52:20] alta:1 listo en 1251s
+[20:52:20] alta:3 (est 4500s, quedan 5829s)
+[21:53:25] alta:3 listo en 3665s
+trabajador terminó; pendientes: ['altado:1', 'altado:2', 'altado:3']
+[21:53:37] altado:2 (est 4200s, quedan 7080s)
+[23:00:13] altado:2 listo en 3996s
+trabajador terminó; pendientes: ['altado:3']

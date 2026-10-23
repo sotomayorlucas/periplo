@@ -1,0 +1,1 @@
+{"task": "alta:2", "seed": 2, "candidato": "anterior", "B": ["SA00@CORP.LOCAL", "SA01@CORP.LOCAL", "WS028.CORP.LOCAL"], "V": 16.50595149863964, "UB": 16.50595149863964, "exact": true, "LB": 16.50595149863964, "cert": true, "dp": {"calls": 5, "states_sum": 8139575, "states_max": 2807654, "t_sum": 701.863861322403, "t_max": 241.50692224502563, "limits": 0}, "t": 702.8412454128265}

@@ -1,0 +1,12 @@
+{"paso": "V0", "V0": 83.87865349216, "V0_ub": 83.87865349216, "t": 2.288403272628784, "seed": 1, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "V0", "V0": 88.90965129177201, "V0_ub": 88.90965129177201, "t": 3.137104034423828, "seed": 3, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "D_viejo", "V_inf": 10.457606894518355, "V_sup": 10.457606894518355, "exacto": true, "beam": 9.537251651129619, "escenarios": 31, "t": 1359.7629952430725, "seed": 1, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "D_viejo", "V_inf": 17.582101722246506, "V_sup": 24.63549355787633, "exacto": false, "beam": 16.25065250342874, "escenarios": 22, "t": 2660.352825164795, "seed": 3, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "visible", "Vvis": 12.602212962755027, "LB": 12.602212962755027, "UB": 12.602212962755027, "cert": true, "B": ["SA00", "SA01", "USER053"], "t": 2665.753685235977, "seed": 1, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "heuristicas", "base": {"top_valor": 48.53749944136155, "intermediacion": 41.4425873070651, "chokepoint": 39.200025232711674}, "gana_a_visible_certificado": true, "t": 2717.4421062469482, "seed": 1, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "V0", "V0": 89.837521383833, "V0_ub": 89.837521383833, "t": 4.007101058959961, "seed": 2, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "D_viejo", "V_inf": 14.726074945260947, "V_sup": 14.726074945260947, "exacto": true, "beam": 12.124219737850012, "escenarios": 24, "t": 2308.804140806198, "seed": 2, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "visible", "Vvis": 32.69130960708369, "LB": 32.69130960708369, "UB": 32.69130960708369, "cert": true, "B": ["DA01", "SA00", "WS001.CORP.LOCAL"], "t": 6099.629310131073, "seed": 3, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "heuristicas", "base": {"top_valor": 44.908383428551275, "intermediacion": 84.032835238972, "chokepoint": 80.2161229332734}, "gana_a_visible_certificado": true, "t": 6141.530743837357, "seed": 3, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "visible", "Vvis": 16.50595149863964, "LB": 16.50595149863964, "UB": 16.50595149863964, "cert": true, "B": ["SA00", "SA01", "WS028.CORP.LOCAL"], "t": 4173.207823038101, "seed": 2, "n": 143, "redundancy": "alta", "delta": 0.0}
+{"paso": "heuristicas", "base": {"top_valor": 35.43491029345754, "intermediacion": 89.837521383833, "chokepoint": 67.32818829382398}, "gana_a_visible_certificado": true, "t": 4229.433634996414, "seed": 2, "n": 143, "redundancy": "alta", "delta": 0.0}
