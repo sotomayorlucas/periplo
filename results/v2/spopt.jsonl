@@ -50,3 +50,4 @@
 {"task": "synth:media:40:4:1.0", "k": 3, "delta": "1.0", "B": ["SRV02.CORP.LOCAL", "USER025@CORP.LOCAL", "WS009.CORP.LOCAL"], "sp_hit": 1.0, "footholds_reach": 5, "V": 31.41438671243111, "V_ub": 31.41438671243111, "exact": true, "t": 2.8604602813720703}
 {"task": "alta:1", "k": 3, "delta": "0.0", "B": ["SA01@CORP.LOCAL", "USER053@CORP.LOCAL", "WS000.CORP.LOCAL"], "sp_hit": 1.0, "footholds_reach": 5, "V": 20.45506573099904, "V_ub": 20.45506573099904, "exact": true, "t": 106.68053483963013}
 {"task": "alta:2", "k": 3, "delta": "0.0", "B": ["HD04@CORP.LOCAL", "USER025@CORP.LOCAL", "WS028.CORP.LOCAL"], "sp_hit": 1.0, "footholds_reach": 5, "V": 63.87148274000001, "V_ub": 63.87148274000001, "exact": true, "t": 2.9210703372955322}
+{"task": "alta:3", "k": 3, "delta": "0.0", "B": ["HD01@CORP.LOCAL", "USER053@CORP.LOCAL", "WS000.CORP.LOCAL"], "sp_hit": 1.0, "footholds_reach": 5, "V": 52.39769816484299, "V_ub": 52.39769816484299, "exact": true, "t": 100.6663887500763}
