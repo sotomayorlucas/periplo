@@ -89,7 +89,7 @@ anterior a la revisión. Compilar con
 - `results/sensitivity_k*.jsonl`: sensibilidad a r, p, q y modelo robusto en caja (`scripts/sensitivity.py`).
 - `results/exact_alta.jsonl`: redundancia alta (143 nodos), donde el DO exacto no termina en 2 h: valor exacto (o cota) de la mezcla vieja y visible óptima certificada (`scripts/exact_alta.py`).
 - `results/goad_exact_baselines.jsonl`: columnas de comparación de GOAD (visible, heurísticas, uniforme) con el atacante exacto.
-- `results/highs_bug_repro.zip` y `results/highs_bug/ISSUE.md`: el issue para HiGHS, listo para publicar.
+- `results/highs_bug_repro.zip` y `results/highs_bug/ISSUE.md`: el issue de HiGHS, publicado como ERGO-Code/HiGHS#3511 (30 oct 2026) y cerrado el 2 nov 2026: guardaron las instancias; en `latest` ya no fallan.
 - `results/highs_bug/`: reproductor autónomo de los óptimos falsos de HiGHS 1.15.1 (tres MPS + `repro.py`).
 
 ## Advertencias

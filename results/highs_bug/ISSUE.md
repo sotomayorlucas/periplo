@@ -1,6 +1,6 @@
-> **Status (22 Oct 2026): not posted.** The development branch `latest` (commit 3a0555f, 22 Oct 2026), built from source,
-> returns the true optimum on all three models with `presolve=off`. Related issues closed in October 2026 include #3387, #3170,
-> #3171 and #3180. Keep this only as a record.
+> **Status: posted on 30 Oct 2026 as https://github.com/ERGO-Code/HiGHS/issues/3511.** Closed as completed on 2 Nov 2026:
+> the developers saved the instances and closed it because the current `latest` branch no longer fails on them; they did not
+> identify which fix resolved it. The PyPI releases up to 1.15.1 still return the wrong values.
 
 # MIP reports "Optimal" with an objective well below the true optimum (presolve off), highspy 1.15.1
 
